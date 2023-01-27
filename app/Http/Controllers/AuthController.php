@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -28,4 +29,48 @@ class AuthController extends Controller
         $token = JWTAuth::fromUser($user);
         return response()->json(compact('user', 'token'), 201);
     }
+
+    public function login(Request $request)
+    {
+        $input = $request->only('email', 'password');
+        $jwt_token = null;
+
+        if (!$jwt_token = JWTAuth::attempt($input)) {
+            return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid Email or Password',
+                ], HttpResponse::HTTP_UNAUTHORIZED);
+        }
+
+        return response()->json([
+                'success' => true,
+                'token' => $jwt_token,
+            ]);
+    }
+
+    public function logout(Request $request)
+    {
+        $this->validate($request, [
+            'token' => 'required'
+        ]);
+        try {
+            JWTAuth::invalidate($request->token);
+            return response()->json([
+                    'success' => true,
+                    'message' => 'User logged out successfully'
+                ]);
+        } catch (\Exception $exception) {
+            return response()->json([
+                    'success' => false,
+                    'message' => 'Sorry, the user cannot be logged out'
+                ], HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function me()
+    {
+        return response()->json(auth()->user());;
+    }
+
+
 }
